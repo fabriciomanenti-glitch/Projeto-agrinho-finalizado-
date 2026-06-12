@@ -1,0 +1,101 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    user-select: none;
+}
+
+body {
+    background-color: #1a2630;
+    overflow: hidden;
+}
+
+/* Força o canvas 3D a ficar no fundo */
+canvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
+
+/* Caixas de estilo dos menus (Efeito de Vidro Jateado) */
+#hud-superior, #hud-inferior, #mensagem-alerta {
+    position: absolute;
+    z-index: 10;
+    background: rgba(20, 30, 40, 0.8),
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* Posição do topo */
+#hud-superior {
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 20px;
+    width: 90%;
+    max-width: 800px;
+    justify-content: space-around;
+}
+
+.info-box {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+/* Alerta no centro */
+#mensagem-alerta {
+    top: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    color: #f5f591;
+    padding: 8px 20px;
+    border-radius: 20px;
+}
+
+/* Posição da base */
+#hud-inferior {
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 800px;
+    text-align: center;
+}
+
+#hud-inferior h3 {
+    font-size: 12px;
+    margin-bottom: 10px;
+    color: #92a1b0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.botoes-container {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.tecla-atalho {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+#status-selecionado {
+    font-size: 14px;
+    color: #00ffcc;
+    font-weight: bold;
+}

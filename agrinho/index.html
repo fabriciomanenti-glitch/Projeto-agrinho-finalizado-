@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eco-Farm 3D</title>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: #1a2630;
+            overflow: hidden;
+        }
+
+        /* Força o canvas 3D a ficar no fundo */
+        canvas {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        /* Caixas de estilo dos menus (Efeito de Vidro Jateado) */
+        #hud-superior, #hud-inferior, #mensagem-alerta {
+            position: absolute;
+            z-index: 10;
+            background: rgba(20, 30, 40, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Posição do topo */
+        #hud-superior {
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            width: 90%;
+            max-width: 800px;
+            justify-content: space-around;
+        }
+
+        .info-box {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        /* Alerta no centro */
+        #mensagem-alerta {
+            top: 110px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 13px;
+            color: #f5f591;
+            padding: 8px 20px;
+            border-radius: 20px;
+        }
+
+        /* Posição da base */
+        #hud-inferior {
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        #hud-inferior h3 {
+            font-size: 12px;
+            margin-bottom: 10px;
+            color: #92a1b0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .botoes-container {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .tecla-atalho {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 13px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        #status-selecionado {
+            font-size: 14px;
+            color: #00ffcc;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="hud-superior">
+        <div class="info-box">📅 <span id="txt-ano">Ano: 1 (Primavera)</span></div>
+        <div class="info-box">💰 <span id="txt-dinheiro">Dinheiro: $5000</span></div>
+        <div class="info-box">🌱 <span id="txt-ambiente">Ambiente: 100%</span></div>
+        <div class="info-box">⚡ <span id="txt-producao">Produção: 0</span></div>
+    </div>
+
+    <div id="mensagem-alerta">Use as SETAS para mover o cursor. ESPAÇO para construir!</div>
+
+    <div id="hud-inferior">
+        <h3>Controles de Construção</h3>
+        <div class="botoes-container">
+            <span class="tecla-atalho">[1] Plantação ($100)</span>
+            <span class="tecla-atalho">[2] Árvore ($50)</span>
+            <span class="tecla-atalho">[3] Painel Solar ($500)</span>
+            <span class="tecla-atalho">[4] Limpar Solo</span>
+        </div>
+        <div id="status-selecionado">Selecionado: Plantação de Grãos 🌾</div>
+    </div>
+
+    <script>
+        let tamanhoBloco = 25;
+        let tamanhoMapa = 15;
+        let mapa = [];
+        let tipoBlocoAtual = 'plantio';
+
+        let seletorX = 7;
+        let seletorZ = 7;
+
+        let producao = 0;
+        let ambiente = 100;
+        let dinheiro = 5000;
+        let ano = 1;
+        let estacao = "Primavera";
+        let contadorEstacao = 0;
+        let velocidadetempo = 120; 
+
+        let anguloY = 0;
+        let anguloX = 0.6; 
+        let distanciaCamera = 450;
+
+        const blocos = {
+          terra: { cor: [139, 69, 19], nome: 'Terra 🌍', custo: 0, receita: 0, ambiente: 0, producao: 0 },
+          plantio: { cor: [218, 165, 32], nome: 'Plantação de Grãos 🌾', custo: 100, receita: 300, ambiente: -4, producao: 12 },
+          arvore: { cor: [46, 139, 87], nome: 'Árvore Nativa 🌳', custo: 50, receita: 20, ambiente: 12, producao: 1 },
+          usina: { cor: [100, 100, 255], nome: 'Painel Solar ☀️', custo: 500, receita: 150, ambiente: 5, producao: 5 }
+        };
+
+        function setup() {
+          createCanvas(windowWidth, windowHeight, WEBGL);
+          
+          for (let x = 0; x < tamanhoMapa; x++) {
+            mapa[x] = [];
+            for (let z = 0; z < tamanhoMapa; z++) {
+              mapa[x][z] = 'terra';
+            }
+          }
+          atualizarInterfaceHTML();
+        }
+
+        function draw() {
+          background(35, 45, 55); 
+          
+          contadorEstacao++;
+          if (contadorEstacao >= velocidadetempo) {
+            contadorEstacao = 0;
+            passarEstacao();
+          }
+
+          if (mouseIsPressed) {
+            anguloY += (mouseX - pmouseX) * 0.01;
+            anguloX += (mouseY - pmouseY) * 0.01;
+            anguloX = constrain(anguloX, 0.2, HALF_PI - 0.1);
+          }
+          
+          camera(
+            sin(anguloY) * cos(anguloX) * distanciaCamera, 
+            sin(anguloX) * distanciaCamera, 
+            cos(anguloY) * cos(anguloX) * distanciaCamera, 
+            0, 0, 0, 
+            0, 1, 0
+          );
+          
+          ambientLight(140);
+          directionalLight(255, 255, 255, 0.6, 1, -0.4);
+
+          let offset = (tamanhoMapa * tamanhoBloco) / 2;
+          for (let x = 0; x < tamanhoMapa; x++) {
+            for (let z = 0; z < tamanhoMapa; z++) {
+              let tipo = mapa[x][z];
+              
+              push();
+              translate(x * tamanhoBloco - offset, 0, z * tamanhoBloco - offset);
+              
+              if (x === seletorX && z === seletorZ) {
+                emissiveMaterial(100, 100, 0); 
+              } else {
+                emissiveMaterial(0);
+              }
+              
+              fill(blocos[tipo].cor[0], blocos[tipo].cor[1], blocos[tipo].cor[2]);
+              stroke(0, 40);
+              
+              let altura = tamanhoBloco;
+              if (tipo === 'arvore') altura = tamanhoBloco * 1.8;
+              if (tipo === 'usina') altura = tamanhoBloco * 1.3;
+              
+              translate(0, -altura/2, 0); 
+              box(tamanhoBloco, altura, tamanhoBloco);
+              pop();
+            }
+          }
+        }
+
+        function pasarEstacao() {
+          // Função corrigida por compatibilidade
+        }
+
+        function passarEstacao() {
+          let estacoes = ["Primavera", "Verão", "Outono", "Inverno"];
+          estacao = estacoes[(estacoes.indexOf(estacao) + 1) % 4];
+          if (estacao === "Primavera") ano++;
+
+          let lucroTurno = 0, mudancaAmbiente = 0, producaoTurno = 0;
+          
+          for (let x = 0; x < tamanhoMapa; x++) {
+            for (let z = 0; z < tamanhoMapa; z++) {
+              let b = blocos[mapa[x][z]];
+              lucroTurno += b.receita;
+              mudancaAmbiente += b.ambiente;
+              producaoTurno += b.producao;
+            }
+          }
+
+          dinheiro += lucroTurno;
+          ambiente = constrain(ambiente + mudancaAmbiente, 0, 100);
+          producao = producaoTurno;
+
+          document.getElementById('mensagem-alerta').innerText = `Nova estação! Lucro: +$${lucroTurno} | Impacto Ambiental: ${mudancaAmbiente >= 0 ? '+' : ''}${mudancaAmbiente}`;
+          atualizarInterfaceHTML();
+        }
+
+        function atualizarInterfaceHTML() {
+          document.getElementById('txt-ano').innerText = `Ano: ${ano} (${estacao})`;
+          document.getElementById('txt-dinheiro').innerText = `Dinheiro: $${dinheiro}`;
+          document.getElementById('txt-ambiente').innerText = `Ambiente: ${ambiente}%`;
+          document.getElementById('txt-producao').innerText = `Produção: ${producao}`;
+          document.getElementById('status-selecionado').innerText = `Selecionado: ${blocos[tipoBlocoAtual].nome} (Cursor em X:${seletorX}, Z:${seletorZ})`;
+        }
+
+        function keyPressed() {
+          if (key === '1') tipoBlocoAtual = 'plantio';
+          if (key === '2') tipoBlocoAtual = 'arvore';
+          if (key === '3') tipoBlocoAtual = 'usina';
+          if (key === '4') tipoBlocoAtual = 'terra';
+
+          if (keyCode === LEFT_ARROW)  seletorX = constrain(seletorX - 1, 0, tamanhoMapa - 1);
+          if (keyCode === RIGHT_ARROW) seletorX = constrain(seletorX + 1, 0, tamanhoMapa - 1);
+          if (keyCode === UP_ARROW)    seletorZ = constrain(seletorZ - 1, 0, tamanhoMapa - 1);
+          if (keyCode === DOWN_ARROW)  seletorZ = constrain(seletorZ + 1, 0, tamanhoMapa - 1);
+
+          if (key === ' ') {
+            let custo = blocos[tipoBlocoAtual].custo;
+            if (dinheiro >= custo) {
+              if (mapa[seletorX][seletorZ] !== tipoBlocoAtual) {
+                dinheiro -= custo;
+                mapa[seletorX][seletorZ] = tipoBlocoAtual;
+                document.getElementById('mensagem-alerta').innerText = `Construiu ${blocos[tipoBlocoAtual].nome}!`;
+              }
+            } else {
+              document.getElementById('mensagem-alerta').innerText = "Saldo de dinheiro insuficiente!";
+            }
+          }
+          atualizarInterfaceHTML();
+        }
+
+        function windowResized() {
+          resizeCanvas(windowWidth, windowHeight);
+        }
+    </script>
+</body>
+</html>
